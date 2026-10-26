@@ -148,6 +148,7 @@ def login():
             return redirect(request.args.get("next") or url_for("dashboard"))
 
         employee_account = EmployeeAccount.query.filter_by(username=username).first()
+       
         if employee_account and employee_account.check_password(password):
             session.clear()
             session.update(
@@ -155,7 +156,7 @@ def login():
                 role="Employee",
                 employee_id=employee_account.employee_id
             )
-            return redirect(request.args.get("next") or url_for("dashboard"))
+            return redirect(url_for("leave"))
 
         flash("Invalid username or password.", "danger")
     return render_template("login.html")
