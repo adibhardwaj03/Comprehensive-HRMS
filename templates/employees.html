@@ -9,4 +9,33 @@
   {% else %}<tr><td colspan="7"><div class="empty-state">No employees found. Try another search or add an employee.</div></td></tr>{% endfor %}
   </tbody></table></div><div class="small text-secondary">{{ employees|length }} employee record(s)</div>
 </section>
+{% if current_role in ['HR','Admin'] %}
+<section class="content-card mt-3">
+  <h2 class="card-title">Create employee portal account</h2>
+  <p class="text-secondary">Create login access for an employee. Use a unique username and a temporary password of at least 12 characters, then share it securely with the employee.</p>
+  <form method="post" action="{{ url_for('employee_account_create', employee_id=0) }}" id="employeeAccountForm">
+    <label class="form-label">Employee</label>
+    <select class="form-select mb-3" id="accountEmployee" required>
+      {% for employee in employees %}
+      <option value="{{ employee.id }}">{{ employee.emp_id }} — {{ employee.name }}{% if employee.portal_account %} (account exists){% endif %}</option>
+      {% endfor %}
+    </select>
+    <label class="form-label">Username</label>
+    <input class="form-control mb-3" name="username" required minlength="3" placeholder="e.g. emp0001">
+    <label class="form-label">Temporary password</label>
+    <input class="form-control mb-3" name="password" type="password" required minlength="12" autocomplete="new-password">
+    <button class="btn btn-primary">Create portal account</button>
+  </form>
+</section>
+<script>
+document.getElementById("accountEmployee").addEventListener("change", function () {
+  document.getElementById("employeeAccountForm").action =
+    "{{ url_for('employee_account_create', employee_id=0) }}".replace("/0/account", "/" + this.value + "/account");
+});
+document.getElementById("employeeAccountForm").addEventListener("submit", function () {
+  const employeeId = document.getElementById("accountEmployee").value;
+  this.action = "{{ url_for('employee_account_create', employee_id=0) }}".replace("/0/account", "/" + employeeId + "/account");
+});
+</script>
+{% endif %}
 {% endblock %}

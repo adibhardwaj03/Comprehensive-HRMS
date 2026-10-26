@@ -30,6 +30,32 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+class EmployeeAccount(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employee.id"), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    employee = db.relationship("Employee", backref=db.backref("portal_account", uselist=False))
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+class AttendanceCorrectionRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employee.id"), nullable=False)
+    attendance_date = db.Column(db.Date, nullable=False)
+    requested_status = db.Column(db.String(20), nullable=False)
+    reason = db.Column(db.String(500), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="Pending")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime)
+    employee = db.relationship("Employee", backref="attendance_correction_requests")
+
+
 class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     emp_id = db.Column(db.String(30), unique=True, nullable=False)
@@ -115,13 +141,24 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username).first()
+
         if user and user.check_password(password):
             session.clear()
             session.update(user_id=user.id, username=user.username, role=user.role)
             return redirect(request.args.get("next") or url_for("dashboard"))
+
+        employee_account = EmployeeAccount.query.filter_by(username=username).first()
+        if employee_account and employee_account.check_password(password):
+            session.clear()
+            session.update(
+                username=employee_account.username,
+                role="Employee",
+                employee_id=employee_account.employee_id
+            )
+            return redirect(request.args.get("next") or url_for("dashboard"))
+
         flash("Invalid username or password.", "danger")
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
@@ -132,6 +169,8 @@ def logout():
 @app.route("/")
 @login_required
 def dashboard():
+    if session.get("role") == "Employee":
+        return redirect(url_for("leave"))
     today = date.today()
     active_count = Employee.query.filter_by(employment_status="Active").count()
     pending_leaves = LeaveRequest.query.filter_by(status="Pending").count()
@@ -149,7 +188,7 @@ def dashboard():
 
 
 @app.route("/employees")
-@login_required
+@hr_required
 def employees():
     search = request.args.get("q", "").strip()
     query = Employee.query
@@ -215,6 +254,33 @@ def employee_edit(employee_id):
     return render_template("employee_form.html", employee=employee)
 
 
+@app.route("/employees/<int:employee_id>/account", methods=["POST"])
+@hr_required
+def employee_account_create(employee_id):
+    employee = Employee.query.get_or_404(employee_id)
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+
+    if len(username) < 3 or len(password) < 12:
+        flash("Choose a username with at least 3 characters and a password with at least 12 characters.", "danger")
+        return redirect(url_for("employees"))
+
+    if EmployeeAccount.query.filter_by(employee_id=employee.id).first():
+        flash("This employee already has a portal account.", "warning")
+        return redirect(url_for("employees"))
+
+    if User.query.filter_by(username=username).first() or EmployeeAccount.query.filter_by(username=username).first():
+        flash("That username is already in use.", "danger")
+        return redirect(url_for("employees"))
+
+    account = EmployeeAccount(employee_id=employee.id, username=username)
+    account.set_password(password)
+    db.session.add(account)
+    db.session.commit()
+    flash("Employee portal account created. Share the login details with the employee securely.", "success")
+    return redirect(url_for("employees"))
+
+
 @app.route("/employees/<int:employee_id>/status", methods=["POST"])
 @hr_required
 def employee_status(employee_id):
@@ -228,59 +294,150 @@ def employee_status(employee_id):
 @app.route("/attendance", methods=["GET", "POST"])
 @login_required
 def attendance():
-    if request.method == "POST":
-        try:
-            employee_id = int(request.form["employee_id"])
-            attendance_date = date.fromisoformat(request.form["attendance_date"])
-            status = request.form["status"]
-            if status not in {"Present", "Absent", "Work From Home"}:
-                raise ValueError("Invalid attendance status.")
-            record = Attendance.query.filter_by(employee_id=employee_id, attendance_date=attendance_date).first()
-            if record:
-                record.status = status
-            else:
-                db.session.add(Attendance(employee_id=employee_id, attendance_date=attendance_date, status=status))
-            db.session.commit()
-            flash("Attendance saved.", "success")
-            return redirect(url_for("attendance"))
-        except Exception:
-            db.session.rollback()
-            flash("Could not save attendance. Check the selected employee and date.", "danger")
+    role = session.get("role")
+
+    if role == "Employee":
+        employee_id = session.get("employee_id")
+        if not employee_id:
+            abort(403)
+
+        if request.method == "POST":
+            try:
+                attendance_date = date.fromisoformat(request.form["attendance_date"])
+                requested_status = request.form["requested_status"]
+                reason = request.form["reason"].strip()
+                if requested_status not in {"Present", "Absent", "Work From Home"}:
+                    raise ValueError("Invalid requested status.")
+                if not reason:
+                    raise ValueError("Please explain the attendance correction.")
+                correction = AttendanceCorrectionRequest(
+                    employee_id=employee_id,
+                    attendance_date=attendance_date,
+                    requested_status=requested_status,
+                    reason=reason
+                )
+                db.session.add(correction)
+                db.session.commit()
+                flash("Attendance correction request submitted to HR.", "success")
+                return redirect(url_for("attendance"))
+            except (ValueError, KeyError):
+                db.session.rollback()
+                flash("Please check the date, requested status and reason.", "danger")
+
+        corrections = AttendanceCorrectionRequest.query.filter_by(
+            employee_id=employee_id
+        ).order_by(AttendanceCorrectionRequest.created_at.desc()).all()
+        records = Attendance.query.filter_by(employee_id=employee_id).order_by(
+            Attendance.attendance_date.desc()
+        ).all()
+        return render_template(
+            "attendance.html", employee_view=True, records=records,
+            correction_requests=corrections, selected_date=date.today(),
+            employees=[], pending_corrections=[]
+        )
+
+    if role not in {"HR", "Admin"}:
+        abort(403)
+
     selected_date = request.args.get("date", date.today().isoformat())
     try:
         parsed_date = date.fromisoformat(selected_date)
     except ValueError:
         parsed_date = date.today()
+
     records = Attendance.query.filter_by(attendance_date=parsed_date).join(Employee).order_by(Employee.name).all()
-    return render_template("attendance.html", employees=Employee.query.filter_by(employment_status="Active").order_by(Employee.name).all(),
-                           records=records, selected_date=parsed_date)
+    pending_corrections = AttendanceCorrectionRequest.query.filter_by(status="Pending").join(
+        Employee
+    ).order_by(AttendanceCorrectionRequest.created_at.asc()).all()
+    return render_template(
+        "attendance.html", employee_view=False, employees=[],
+        records=records, selected_date=parsed_date,
+        correction_requests=[], pending_corrections=pending_corrections
+    )
+
+
+@app.route("/attendance/corrections/<int:request_id>/decision", methods=["POST"])
+@hr_required
+def attendance_correction_decision(request_id):
+    correction = AttendanceCorrectionRequest.query.get_or_404(request_id)
+    decision = request.form.get("decision")
+
+    if correction.status != "Pending" or decision not in {"Approved", "Rejected"}:
+        flash("This correction request can no longer be changed.", "warning")
+        return redirect(url_for("attendance"))
+
+    if decision == "Approved":
+        record = Attendance.query.filter_by(
+            employee_id=correction.employee_id,
+            attendance_date=correction.attendance_date
+        ).first()
+        if record:
+            record.status = correction.requested_status
+        else:
+            record = Attendance(
+                employee_id=correction.employee_id,
+                attendance_date=correction.attendance_date,
+                status=correction.requested_status
+            )
+            db.session.add(record)
+
+    correction.status = decision
+    correction.reviewed_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"Attendance correction {decision.lower()}.", "success")
+    return redirect(url_for("attendance"))
 
 
 @app.route("/leave", methods=["GET", "POST"])
 @login_required
 def leave():
+    role = session.get("role")
+
+    if role == "Employee":
+        employee_id = session.get("employee_id")
+        if not employee_id:
+            abort(403)
+
+        if request.method == "POST":
+            try:
+                start_date = date.fromisoformat(request.form["start_date"])
+                end_date = date.fromisoformat(request.form["end_date"])
+                leave_type = request.form["leave_type"]
+                reason = request.form["reason"].strip()
+                if end_date < start_date:
+                    raise ValueError("End date cannot be earlier than start date.")
+                if leave_type not in {"Annual", "Sick", "Personal", "Unpaid"}:
+                    raise ValueError("Invalid leave type.")
+                if not reason:
+                    raise ValueError("Please provide a reason.")
+                request_record = LeaveRequest(
+                    employee_id=employee_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    leave_type=leave_type,
+                    reason=reason
+                )
+                db.session.add(request_record)
+                db.session.commit()
+                flash("Leave request submitted to HR for review.", "success")
+                return redirect(url_for("leave"))
+            except (ValueError, KeyError):
+                db.session.rollback()
+                flash("Could not submit leave request. Check the dates and details.", "danger")
+
+        requests = LeaveRequest.query.filter_by(employee_id=employee_id).order_by(
+            LeaveRequest.created_at.desc()
+        ).all()
+        return render_template("leave.html", employee_view=True, leave_requests=requests)
+
+    if role not in {"HR", "Admin"}:
+        abort(403)
+
     if request.method == "POST":
-        try:
-            start_date = date.fromisoformat(request.form["start_date"])
-            end_date = date.fromisoformat(request.form["end_date"])
-            if end_date < start_date:
-                raise ValueError("End date cannot be earlier than start date.")
-            request_record = LeaveRequest(
-                employee_id=int(request.form["employee_id"]),
-                start_date=start_date,
-                end_date=end_date,
-                leave_type=request.form["leave_type"],
-                reason=request.form["reason"].strip()
-            )
-            db.session.add(request_record)
-            db.session.commit()
-            flash("Leave request submitted.", "success")
-            return redirect(url_for("leave"))
-        except Exception as error:
-            db.session.rollback()
-            flash(f"Could not submit leave request. {error}", "danger")
+        abort(403)
+
     requests = LeaveRequest.query.join(Employee).order_by(LeaveRequest.created_at.desc()).all()
-    return render_template("leave.html", employees=Employee.query.order_by(Employee.name).all(), leave_requests=requests)
+    return render_template("leave.html", employee_view=False, leave_requests=requests)
 
 
 @app.route("/leave/<int:request_id>/decision", methods=["POST"])
@@ -295,7 +452,6 @@ def leave_decision(request_id):
         db.session.commit()
         flash(f"Leave request {decision.lower()}.", "success")
     return redirect(url_for("leave"))
-
 
 @app.route("/recruitment", methods=["GET", "POST"])
 @hr_required
@@ -358,7 +514,7 @@ def payroll():
 
 
 @app.route("/analytics")
-@login_required
+@hr_required
 def analytics():
     department_rows = db.session.query(Employee.department, func.count(Employee.id), func.avg(Employee.monthly_salary_inr)).group_by(Employee.department).all()
     grade_rows = db.session.query(Employee.grade, func.avg(Employee.monthly_salary_inr), func.count(Employee.id)).group_by(Employee.grade).order_by(Employee.grade).all()
@@ -370,7 +526,7 @@ def analytics():
 
 
 @app.route("/api/summary")
-@login_required
+@hr_required
 def api_summary():
     return jsonify({
         "active_employees": Employee.query.filter_by(employment_status="Active").count(),
@@ -382,7 +538,7 @@ def api_summary():
 
 
 @app.route("/api/employees")
-@login_required
+@hr_required
 def api_employees():
     records = Employee.query.order_by(Employee.name).all()
     return jsonify([{
@@ -393,7 +549,7 @@ def api_employees():
 
 
 @app.route("/export/employees.csv")
-@login_required
+@hr_required
 def export_employees():
     records = Employee.query.order_by(Employee.name).all()
     import csv

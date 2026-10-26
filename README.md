@@ -107,3 +107,13 @@ Comprehensive-HRMS-Complete/
 # Comprehensive-HRMS
 >>>>>>> origin/main
 git add README.mdgit status
+
+## Employee self-service and HR workflows
+
+The HR/Admin attendance screen is read-only. Employees can submit attendance correction requests, and HR/Admin can approve or reject them. Approving a request updates the attendance record and records the decision status.
+
+Employees with portal accounts can submit their own leave requests and view their own request history. HR/Admin users can view all leave requests and approve or reject pending requests.
+
+To create an employee portal account, sign in as HR/Admin, open Employees, and use the **Create employee portal account** form. Choose the employee, a unique username, and a strong temporary password of at least 12 characters. Share credentials securely. Do not use real employee data until database persistence and access controls have been verified.
+
+The app calls `db.create_all()` on startup, so the new employee-account and attendance-correction tables are created automatically. Existing records are not intentionally deleted by this change. Back up your database before deploying changes to a production-like environment.
