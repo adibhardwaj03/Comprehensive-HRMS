@@ -111,14 +111,22 @@ class Payroll(db.Model):
     __table_args__ = (db.UniqueConstraint("employee_id", "pay_month"),)
 
 
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect(url_for("login", next=request.path))
-        return view(*args, **kwargs)
-    return wrapped
+        is_regular_user = bool(session.get("user_id"))
+        is_employee = (
+            session.get("role") == "Employee"
+            and bool(session.get("employee_id"))
+        )
 
+        if not is_regular_user and not is_employee:
+            return redirect(url_for("login", next=request.path))
+
+        return view(*args, **kwargs)
+
+    return wrapped
 
 def hr_required(view):
     @wraps(view)
