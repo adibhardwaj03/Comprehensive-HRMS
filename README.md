@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 # Comprehensive HR Management System
 
@@ -102,3 +103,6 @@ Comprehensive-HRMS-Complete/
 - Demo data must remain anonymised. Do not enter real employee personal or payroll data.
 - Before public deployment, add CSRF protection, rate limiting, secure cookie settings, audit logging, database migrations, password reset, stronger role design and production server configuration.
 - Attrition analytics should be evaluated for class imbalance, leakage, bias and calibration before use. A model score must not be used as an automatic employment decision.
+=======
+# Comprehensive-HRMS
+>>>>>>> origin/main
