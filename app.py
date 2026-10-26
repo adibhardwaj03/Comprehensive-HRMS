@@ -412,12 +412,22 @@ def export_employees():
 @app.cli.command("init-db")
 def init_db():
     db.create_all()
-    if not User.query.filter_by(username="admin").first():
+
+    user = User.query.filter_by(username="admin").first()
+
+    if not user:
         user = User(username="admin", role="Admin")
-        user.set_password(os.environ.get("HRMS_ADMIN_PASSWORD", "ChangeMe123!"))
         db.session.add(user)
-        db.session.commit()
-    print("Database initialized. Change the default admin password before using real data.")
+
+    password = os.environ.get("HRMS_ADMIN_PASSWORD")
+
+    if not password:
+        raise ValueError("HRMS_ADMIN_PASSWORD is not configured.")
+
+    user.set_password(password)
+    db.session.commit()
+
+    print("Admin password updated successfully.")
 
 
 @app.cli.command("import-dataset")

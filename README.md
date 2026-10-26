@@ -106,3 +106,4 @@ Comprehensive-HRMS-Complete/
 =======
 # Comprehensive-HRMS
 >>>>>>> origin/main
+git add README.mdgit status
