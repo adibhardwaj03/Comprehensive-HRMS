@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+<div class="page-heading d-flex flex-wrap align-items-end justify-content-between gap-3">
+  <div><p class="eyebrow">PEOPLE OPERATIONS</p><h1>HR overview</h1><p class="text-secondary mb-0">A clear view of your workforce and daily HR activity.</p></div>
+  <div class="date-chip">{{ today.strftime("%d %b %Y") }}</div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-top"><span>Active employees</span><span class="metric-icon blue"><i>U</i></span></div><div class="metric-number">{{ active_count }}</div><div class="metric-foot">Current employee records</div></div></div>
+  <div class="col-12 col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-top"><span>Pending leave</span><span class="metric-icon amber"><i>L</i></span></div><div class="metric-number">{{ pending_leaves }}</div><div class="metric-foot">Requests awaiting a decision</div></div></div>
+  <div class="col-12 col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-top"><span>Open candidates</span><span class="metric-icon violet"><i>R</i></span></div><div class="metric-number">{{ open_candidates }}</div><div class="metric-foot">Applications in progress</div></div></div>
+  <div class="col-12 col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-top"><span>Payroll this month</span><span class="metric-icon green"><i>₹</i></span></div><div class="metric-number money">₹{{ "{:,.0f}".format(month_payroll) }}</div><div class="metric-foot">{{ today.strftime("%B %Y") }} net payroll records</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-12 col-xl-7"><section class="content-card h-100"><div class="section-heading"><div><h2>Employees by department</h2><p>Current records grouped by department</p></div><a href="{{ url_for('employees') }}" class="text-link">View directory →</a></div>
+    {% if department_rows %}
+      {% set max_count = department_rows | map(attribute=1) | max %}
+      {% for department, count in department_rows %}
+      <div class="bar-row"><div class="d-flex justify-content-between mb-2"><span>{{ department }}</span><strong>{{ count }}</strong></div><div class="progress"><div class="progress-bar" style="width: {{ (count / max_count * 100) if max_count else 0 }}%"></div></div></div>
+      {% endfor %}
+    {% else %}<div class="empty-state">No employee records yet. Add your first employee to get started.</div>{% endif %}
+  </section></div>
+  <div class="col-12 col-xl-5"><section class="content-card h-100"><div class="section-heading"><div><h2>Quick actions</h2><p>Common HR tasks</p></div></div>
+    <div class="quick-links">
+      <a href="{{ url_for('employee_new') }}"><span class="quick-icon">＋</span><span><strong>Add an employee</strong><small>Create an employee record</small></span><b>→</b></a>
+      <a href="{{ url_for('attendance') }}"><span class="quick-icon">✓</span><span><strong>Record attendance</strong><small>Mark attendance for a date</small></span><b>→</b></a>
+      <a href="{{ url_for('leave') }}"><span class="quick-icon">▤</span><span><strong>Review leave</strong><small>View requests and decisions</small></span><b>→</b></a>
+      <a href="{{ url_for('analytics') }}"><span class="quick-icon">↗</span><span><strong>Open analytics</strong><small>Explore workforce summaries</small></span><b>→</b></a>
+    </div>
+  </section></div>
+</div>
+{% endblock %}

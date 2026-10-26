@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block content %}
+<div class="page-heading d-flex flex-wrap justify-content-between align-items-end gap-3"><div><p class="eyebrow">DIRECTORY</p><h1>Employees</h1><p class="text-secondary mb-0">Manage employee records in one place.</p></div><div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{{ url_for('export_employees') }}">Export CSV</a>{% if current_role in ['HR','Admin'] %}<a class="btn btn-primary" href="{{ url_for('employee_new') }}">＋ Add employee</a>{% endif %}</div></div>
+<section class="content-card">
+  <form class="search-row mb-3" method="get"><input class="form-control" name="q" value="{{ search }}" placeholder="Search by name, ID, email or department"><button class="btn btn-dark">Search</button>{% if search %}<a class="btn btn-outline-secondary" href="{{ url_for('employees') }}">Clear</a>{% endif %}</form>
+  <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Employee</th><th>Department</th><th>Grade</th><th>Joined</th><th>Monthly salary</th><th>Status</th>{% if current_role in ['HR','Admin'] %}<th></th>{% endif %}</tr></thead><tbody>
+  {% for employee in employees %}<tr><td><div class="employee-cell"><span class="avatar">{{ employee.name[:1].upper() }}</span><span><strong>{{ employee.name }}</strong><small>{{ employee.emp_id }} · {{ employee.email }}</small></span></div></td><td>{{ employee.department }}</td><td><span class="grade-pill">{{ employee.grade }}</span></td><td>{{ employee.join_date.strftime("%d %b %Y") }}</td><td>₹{{ "{:,.0f}".format(employee.monthly_salary_inr) }}</td><td><span class="status-pill {{ 'status-green' if employee.employment_status == 'Active' else 'status-muted' }}">{{ employee.employment_status }}</span></td>{% if current_role in ['HR','Admin'] %}<td><div class="d-flex gap-2"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('employee_edit', employee_id=employee.id) }}">Edit</a><form method="post" action="{{ url_for('employee_status', employee_id=employee.id) }}"><button class="btn btn-sm btn-outline-secondary">{{ 'Deactivate' if employee.employment_status == 'Active' else 'Activate' }}</button></form></div></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="7"><div class="empty-state">No employees found. Try another search or add an employee.</div></td></tr>{% endfor %}
+  </tbody></table></div><div class="small text-secondary">{{ employees|length }} employee record(s)</div>
+</section>
+{% endblock %}

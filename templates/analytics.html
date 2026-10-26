@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">WORKFORCE INSIGHTS</p><h1>HR analytics</h1><p class="text-secondary mb-0">Summaries based on records currently stored in the application.</p></div>
+<div class="row g-3">
+<div class="col-12 col-xl-6"><section class="content-card"><h2 class="card-title">Employees by department</h2><div class="table-responsive"><table class="table"><thead><tr><th>Department</th><th>Employees</th><th>Average monthly salary</th></tr></thead><tbody>{% for department, count, salary in department_rows %}<tr><td>{{ department }}</td><td>{{ count }}</td><td>₹{{ "{:,.0f}".format(salary or 0) }}</td></tr>{% else %}<tr><td colspan="3">No records available.</td></tr>{% endfor %}</tbody></table></div></section></div>
+<div class="col-12 col-xl-6"><section class="content-card"><h2 class="card-title">Salary by grade</h2><div class="table-responsive"><table class="table"><thead><tr><th>Grade</th><th>Employees</th><th>Average monthly salary</th></tr></thead><tbody>{% for grade, salary, count in grade_rows %}<tr><td><span class="grade-pill">{{ grade }}</span></td><td>{{ count }}</td><td>₹{{ "{:,.0f}".format(salary or 0) }}</td></tr>{% else %}<tr><td colspan="3">No records available.</td></tr>{% endfor %}</tbody></table></div></section></div>
+<div class="col-12 col-lg-4"><section class="content-card"><h2 class="card-title">Attendance</h2>{% for status, count in attendance_rows %}<div class="summary-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>{% else %}<p class="text-secondary">No attendance data yet.</p>{% endfor %}</section></div>
+<div class="col-12 col-lg-4"><section class="content-card"><h2 class="card-title">Leave requests</h2>{% for status, count in leave_rows %}<div class="summary-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>{% else %}<p class="text-secondary">No leave data yet.</p>{% endfor %}</section></div>
+<div class="col-12 col-lg-4"><section class="content-card"><h2 class="card-title">Recruitment stages</h2>{% for status, count in candidate_rows %}<div class="summary-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>{% else %}<p class="text-secondary">No candidate data yet.</p>{% endfor %}</section></div>
+</div>
+<div class="alert alert-info mt-3">Historical attrition analysis remains in the supplied EDA dataset. It is kept separate from live employee status because the sample data does not establish a current HR roster.</div>
+{% endblock %}

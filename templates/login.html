@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="login-shell">
+  <section class="login-panel">
+    <div class="brand-mark large-mark">P</div>
+    <p class="eyebrow mt-4">PEOPLE OPERATIONS</p>
+    <h1 class="h2 fw-bold mb-2">Welcome back</h1>
+    <p class="text-secondary mb-4">Sign in to manage your HR workspace.</p>
+    <form method="post">
+      <label class="form-label" for="username">Username</label>
+      <input class="form-control form-control-lg mb-3" id="username" name="username" required autocomplete="username">
+      <label class="form-label" for="password">Password</label>
+      <input class="form-control form-control-lg mb-4" id="password" name="password" type="password" required autocomplete="current-password">
+      <button class="btn btn-primary btn-lg w-100">Sign in</button>
+    </form>
+    <p class="small text-secondary mt-4 mb-0">For local development, initialize the database using the README instructions.</p>
+  </section>
+</div>
+{% endblock %}

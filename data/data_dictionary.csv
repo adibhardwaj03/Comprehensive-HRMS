@@ -1,0 +1,9 @@
+column_name,data_type,description,example
+emp_id,String,Unique identifier assigned to each employee,EMP0001
+department,Categorical,Department in which the employee works,Engineering
+grade,Categorical,Employee grade or organizational level,L3
+join_date,Date,Date the employee joined the organization,2025-04-15
+monthly_salary_inr,Numeric,Employee's monthly salary in Indian rupees,85000
+leave_days_taken,Numeric,Number of leave days taken by the employee,8
+performance_score,Numeric,Employee performance score on a 1–5 scale,3.5
+attrition,Binary,"Indicates whether the employee left the organization; 1 = Yes, 0 = No",0
