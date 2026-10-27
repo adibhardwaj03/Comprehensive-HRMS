@@ -607,31 +607,34 @@ def analytics():
             )
 
             historical.update({
-                "available": True,
-                "attrition_counts": [
-                    int(attrition_counts.get(0, 0)),
-                    int(attrition_counts.get(1, 0))
-                ],
-                "departments": department_counts.index.tolist(),
-                "department_counts": [
-                    int(value) for value in department_counts.values
-                ],
-                "performance_scores": (
-                    data["performance_score"]
-                    .dropna()
-                    .tolist()
-                ),
-                "salary_grades": sorted(
-                    salary_data["grade"].unique().tolist()
-                ),
-                "salary_values": [
-                    salary_data.loc[
-                        salary_data["grade"] == grade,
-                        "monthly_salary_inr"
-                    ].tolist()
-                    for grade in sorted(salary_data["grade"].unique())
-                ]
-            })
+    "available": True,
+    "attrition_counts": [
+        int(attrition_counts.get(0, 0)),
+        int(attrition_counts.get(1, 0))
+    ],
+    "departments": department_counts.index.tolist(),
+    "department_counts": [
+        int(value) for value in department_counts.values
+    ],
+    "performance_scores": data["performance_score"].dropna().tolist(),
+    "salary_grades": sorted(
+        salary_data["grade"].unique().tolist()
+    ),
+    "salary_values": [
+        salary_data.loc[
+            salary_data["grade"] == grade,
+            "monthly_salary_inr"
+        ].tolist()
+        for grade in sorted(salary_data["grade"].unique())
+    ],
+    "total_employees": int(data["attrition"].notna().sum()),
+    "employees_left": int(attrition_counts.get(1, 0)),
+    "attrition_rate": round(
+        int(attrition_counts.get(1, 0))
+        / max(int(data["attrition"].notna().sum()), 1) * 100,
+        1
+    )
+})
 
     return render_template(
         "analytics.html",
