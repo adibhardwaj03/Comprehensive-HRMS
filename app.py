@@ -555,7 +555,7 @@ def analytics():
     ).group_by(Candidate.status).all()
 
     dataset_path = (
-        Path(os.environ.get("HRMS_DATASET_PATH"))
+        Path(os.environ["HRMS_DATASET_PATH"])
         if os.environ.get("HRMS_DATASET_PATH")
         else Path(__file__).resolve().parent
         / "data"
@@ -596,9 +596,21 @@ def analytics():
         }
 
         if required_columns.issubset(data.columns):
-            data["attrition"] = pd.to_numeric(
-                data["attrition"], errors="coerce"
+            attrition_values = (
+                data["attrition"].astype("string").str.strip().str.lower()
             )
+
+            data["attrition"] = attrition_values.map({
+                "0": 0,
+                "1": 1,
+                "no": 0,
+                "yes": 1,
+                "false": 0,
+                "true": 1,
+                "stayed": 0,
+                "left": 1
+            })
+
             data["performance_score"] = pd.to_numeric(
                 data["performance_score"], errors="coerce"
             )
@@ -607,6 +619,8 @@ def analytics():
             )
 
             attrition_counts = data["attrition"].value_counts()
+
+            print("ATTRITION COUNTS:", attrition_counts.to_dict())
 
             department_counts = (
                 data["department"]
@@ -623,7 +637,7 @@ def analytics():
             employees_left = int(attrition_counts.get(1, 0))
 
             historical.update({
-                "available": True,
+                "available": total_employees > 0,
                 "attrition_counts": [
                     int(attrition_counts.get(0, 0)),
                     employees_left
@@ -643,9 +657,7 @@ def analytics():
                         salary_data["grade"] == grade,
                         "monthly_salary_inr"
                     ].tolist()
-                    for grade in sorted(
-                        salary_data["grade"].unique()
-                    )
+                    for grade in sorted(salary_data["grade"].unique())
                 ],
                 "total_employees": total_employees,
                 "employees_left": employees_left,
@@ -655,18 +667,22 @@ def analytics():
                 )
             })
 
-            print(
-                f"Historical dataset loaded: {len(data)} rows; "
-                f"employees counted: {total_employees}; "
-                f"employees left: {employees_left}"
-            )
+            print("HISTORICAL METRICS:", {
+                key: historical[key]
+                for key in (
+                    "available",
+                    "total_employees",
+                    "employees_left",
+                    "attrition_rate"
+                )
+            })
         else:
             print(
-                "Historical dataset is missing required columns:",
+                "Missing required columns:",
                 sorted(required_columns - set(data.columns))
             )
     else:
-        print(f"Historical dataset not found: {dataset_path}")
+        print("DATASET NOT FOUND:", dataset_path)
 
     return render_template(
         "analytics.html",
@@ -677,6 +693,7 @@ def analytics():
         candidate_rows=candidate_rows,
         historical=historical
     )
+
 
 
 
