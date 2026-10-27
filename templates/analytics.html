@@ -300,10 +300,13 @@
 </style>
 
 {% if historical.available %}
+<script id="historical-data" type="application/json">{{ historical | tojson }}</script>
 <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const historical = {{ historical | tojson }};
+    const historical = JSON.parse(
+        document.getElementById("historical-data").textContent
+    );
     const chartColor = "#5876a5";
     const chartLayout = {
         autosize: true,

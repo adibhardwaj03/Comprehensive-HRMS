@@ -1,7 +1,8 @@
 import os
 from datetime import date, datetime
 from functools import wraps
-
+from os import path
+from pathlib import Path
 import pandas as pd
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -522,6 +523,7 @@ def payroll():
                            payroll_records=records, current_month=date.today().strftime("%Y-%m"))
 
 
+
 @app.route("/analytics")
 @hr_required
 def analytics():
@@ -552,13 +554,17 @@ def analytics():
         func.count(Candidate.id)
     ).group_by(Candidate.status).all()
 
-    dataset_path = os.environ.get(
-        "HRMS_DATASET_PATH",
-        "data/processed/cleaned_dataset.csv"
+    dataset_path = (
+        Path(os.environ.get("HRMS_DATASET_PATH"))
+        if os.environ.get("HRMS_DATASET_PATH")
+        else Path(__file__).resolve().parent
+        / "data"
+        / "processed"
+        / "cleaned_dataset.csv"
     )
 
-    if not os.path.exists(dataset_path):
-        dataset_path = "HRMS_dataset_5000_records.csv"
+    if not dataset_path.is_absolute():
+        dataset_path = Path(__file__).resolve().parent / dataset_path
 
     historical = {
         "available": False,
@@ -568,10 +574,13 @@ def analytics():
         "department_counts": [],
         "performance_scores": [],
         "salary_grades": [],
-        "salary_values": []
+        "salary_values": [],
+        "total_employees": 0,
+        "employees_left": 0,
+        "attrition_rate": 0.0
     }
 
-    if os.path.exists(dataset_path):
+    if dataset_path.exists():
         data = pd.read_csv(dataset_path)
 
         required_columns = {
@@ -606,35 +615,54 @@ def analytics():
                 subset=["grade", "monthly_salary_inr"]
             )
 
+            total_employees = int(data["attrition"].notna().sum())
+            employees_left = int(attrition_counts.get(1, 0))
+
             historical.update({
-    "available": True,
-    "attrition_counts": [
-        int(attrition_counts.get(0, 0)),
-        int(attrition_counts.get(1, 0))
-    ],
-    "departments": department_counts.index.tolist(),
-    "department_counts": [
-        int(value) for value in department_counts.values
-    ],
-    "performance_scores": data["performance_score"].dropna().tolist(),
-    "salary_grades": sorted(
-        salary_data["grade"].unique().tolist()
-    ),
-    "salary_values": [
-        salary_data.loc[
-            salary_data["grade"] == grade,
-            "monthly_salary_inr"
-        ].tolist()
-        for grade in sorted(salary_data["grade"].unique())
-    ],
-    "total_employees": int(data["attrition"].notna().sum()),
-    "employees_left": int(attrition_counts.get(1, 0)),
-    "attrition_rate": round(
-        int(attrition_counts.get(1, 0))
-        / max(int(data["attrition"].notna().sum()), 1) * 100,
-        1
-    )
-})
+                "available": True,
+                "attrition_counts": [
+                    int(attrition_counts.get(0, 0)),
+                    employees_left
+                ],
+                "departments": department_counts.index.tolist(),
+                "department_counts": [
+                    int(value) for value in department_counts.values
+                ],
+                "performance_scores": (
+                    data["performance_score"].dropna().tolist()
+                ),
+                "salary_grades": sorted(
+                    salary_data["grade"].unique().tolist()
+                ),
+                "salary_values": [
+                    salary_data.loc[
+                        salary_data["grade"] == grade,
+                        "monthly_salary_inr"
+                    ].tolist()
+                    for grade in sorted(
+                        salary_data["grade"].unique()
+                    )
+                ],
+                "total_employees": total_employees,
+                "employees_left": employees_left,
+                "attrition_rate": round(
+                    employees_left / max(total_employees, 1) * 100,
+                    1
+                )
+            })
+
+            print(
+                f"Historical dataset loaded: {len(data)} rows; "
+                f"employees counted: {total_employees}; "
+                f"employees left: {employees_left}"
+            )
+        else:
+            print(
+                "Historical dataset is missing required columns:",
+                sorted(required_columns - set(data.columns))
+            )
+    else:
+        print(f"Historical dataset not found: {dataset_path}")
 
     return render_template(
         "analytics.html",
@@ -645,6 +673,7 @@ def analytics():
         candidate_rows=candidate_rows,
         historical=historical
     )
+
 
 
 @app.route("/api/summary")
