@@ -1,13 +1,335 @@
+
 {% extends "base.html" %}
 {% block title %}Analytics{% endblock %}
+
 {% block content %}
-<div class="page-heading"><p class="eyebrow">WORKFORCE INSIGHTS</p><h1>HR analytics</h1><p class="text-secondary mb-0">Summaries based on records currently stored in the application.</p></div>
-<div class="row g-3">
-<div class="col-12 col-xl-6"><section class="content-card"><h2 class="card-title">Employees by department</h2><div class="table-responsive"><table class="table"><thead><tr><th>Department</th><th>Employees</th><th>Average monthly salary</th></tr></thead><tbody>{% for department, count, salary in department_rows %}<tr><td>{{ department }}</td><td>{{ count }}</td><td>₹{{ "{:,.0f}".format(salary or 0) }}</td></tr>{% else %}<tr><td colspan="3">No records available.</td></tr>{% endfor %}</tbody></table></div></section></div>
-<div class="col-12 col-xl-6"><section class="content-card"><h2 class="card-title">Salary by grade</h2><div class="table-responsive"><table class="table"><thead><tr><th>Grade</th><th>Employees</th><th>Average monthly salary</th></tr></thead><tbody>{% for grade, salary, count in grade_rows %}<tr><td><span class="grade-pill">{{ grade }}</span></td><td>{{ count }}</td><td>₹{{ "{:,.0f}".format(salary or 0) }}</td></tr>{% else %}<tr><td colspan="3">No records available.</td></tr>{% endfor %}</tbody></table></div></section></div>
-<div class="col-12 col-lg-4"><section class="content-card"><h2 class="card-title">Attendance</h2>{% for status, count in attendance_rows %}<div class="summary-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>{% else %}<p class="text-secondary">No attendance data yet.</p>{% endfor %}</section></div>
-<div class="col-12 col-lg-4"><section class="content-card"><h2 class="card-title">Leave requests</h2>{% for status, count in leave_rows %}<div class="summary-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>{% else %}<p class="text-secondary">No leave data yet.</p>{% endfor %}</section></div>
-<div class="col-12 col-lg-4"><section class="content-card"><h2 class="card-title">Recruitment stages</h2>{% for status, count in candidate_rows %}<div class="summary-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>{% else %}<p class="text-secondary">No candidate data yet.</p>{% endfor %}</section></div>
+<div class="page-heading">
+    <p class="eyebrow">WORKFORCE INSIGHTS</p>
+    <h1>HR analytics</h1>
+    <p class="text-secondary mb-0">
+        Live workforce summaries and historical employee analysis.
+    </p>
 </div>
-<div class="alert alert-info mt-3">Historical attrition analysis remains in the supplied EDA dataset. It is kept separate from live employee status because the sample data does not establish a current HR roster.</div>
+
+<div class="row g-3">
+    <div class="col-12 col-xl-6">
+        <section class="content-card">
+            <h2 class="card-title">Employees by department</h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Employees</th>
+                            <th>Average monthly salary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for department, count, salary in department_rows %}
+                        <tr>
+                            <td>{{ department }}</td>
+                            <td>{{ count }}</td>
+                            <td>₹{{ "{:,.0f}".format(salary or 0) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3">No records available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-12 col-xl-6">
+        <section class="content-card">
+            <h2 class="card-title">Salary by grade</h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Grade</th>
+                            <th>Employees</th>
+                            <th>Average monthly salary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grade, salary, count in grade_rows %}
+                        <tr>
+                            <td><span class="grade-pill">{{ grade }}</span></td>
+                            <td>{{ count }}</td>
+                            <td>₹{{ "{:,.0f}".format(salary or 0) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3">No records available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <section class="content-card">
+            <h2 class="card-title">Attendance</h2>
+            {% for status, count in attendance_rows %}
+            <div class="summary-row">
+                <span>{{ status }}</span><strong>{{ count }}</strong>
+            </div>
+            {% else %}
+            <p class="text-secondary">No attendance data yet.</p>
+            {% endfor %}
+        </section>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <section class="content-card">
+            <h2 class="card-title">Leave requests</h2>
+            {% for status, count in leave_rows %}
+            <div class="summary-row">
+                <span>{{ status }}</span><strong>{{ count }}</strong>
+            </div>
+            {% else %}
+            <p class="text-secondary">No leave data yet.</p>
+            {% endfor %}
+        </section>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <section class="content-card">
+            <h2 class="card-title">Recruitment stages</h2>
+            {% for status, count in candidate_rows %}
+            <div class="summary-row">
+                <span>{{ status }}</span><strong>{{ count }}</strong>
+            </div>
+            {% else %}
+            <p class="text-secondary">No candidate data yet.</p>
+            {% endfor %}
+        </section>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3">
+    Historical attrition and workforce distributions come from the EDA
+    dataset. They are separate from current live HR records.
+</div>
+
+<section class="mt-4">
+    <div class="page-heading">
+        <p class="eyebrow">HISTORICAL DATASET</p>
+        <h2>Workforce visualizations</h2>
+        <p class="text-secondary">
+            Interactive charts based on the supplied employee dataset.
+        </p>
+    </div>
+
+    {% if historical.available %}
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <section class="content-card chart-card">
+                <h3 class="card-title">Employee attrition distribution</h3>
+                <div id="attritionChart" class="chart-area"></div>
+            </section>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <section class="content-card chart-card">
+                <h3 class="card-title">Employees by department</h3>
+                <div id="departmentChart" class="chart-area"></div>
+            </section>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <section class="content-card chart-card">
+                <h3 class="card-title">Performance score distribution</h3>
+                <div id="performanceChart" class="chart-area"></div>
+            </section>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <section class="content-card chart-card">
+                <h3 class="card-title">Monthly salary by grade</h3>
+                <div id="salaryChart" class="chart-area"></div>
+            </section>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        The historical dataset could not be loaded. Check the
+        HRMS_DATASET_PATH setting and ensure the CSV contains the expected
+        columns.
+    </div>
+    {% endif %}
+</section>
+
+<style>
+.chart-card {
+    height: 100%;
+    overflow: hidden;
+    animation: chartEnter 650ms ease both;
+}
+
+.chart-card:nth-child(2) { animation-delay: 100ms; }
+.chart-card:nth-child(3) { animation-delay: 200ms; }
+.chart-card:nth-child(4) { animation-delay: 300ms; }
+
+.chart-area {
+    width: 100%;
+    min-height: 340px;
+}
+
+@keyframes chartEnter {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chart-card {
+        animation: none;
+    }
+}
+</style>
+
+{% if historical.available %}
+<script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const historical = {{ historical | tojson }};
+    const chartColor = "#5876a5";
+    const chartLayout = {
+        autosize: true,
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)",
+        font: { family: "Arial, sans-serif", size: 12 },
+        margin: { l: 55, r: 20, t: 25, b: 55 },
+        xaxis: { gridcolor: "#e6eaf0", zerolinecolor: "#d5dbe5" },
+        yaxis: { gridcolor: "#e6eaf0", zerolinecolor: "#d5dbe5" },
+        transition: { duration: 700, easing: "cubic-in-out" }
+    };
+    const chartConfig = {
+        responsive: true,
+        displaylogo: false
+    };
+
+    const attritionTrace = {
+        type: "bar",
+        x: historical.attrition_labels,
+        y: historical.attrition_counts,
+        marker: { color: chartColor, line: { width: 0 } },
+        hovertemplate: "%{x}: %{y} employees<extra></extra>"
+    };
+
+    Plotly.newPlot(
+        "attritionChart",
+        [{ ...attritionTrace, y: [0, 0] }],
+        {
+            ...chartLayout,
+            xaxis: { ...chartLayout.xaxis, title: "Attrition status" },
+            yaxis: { ...chartLayout.yaxis, title: "Employees", rangemode: "tozero" }
+        },
+        chartConfig
+    ).then(function () {
+        return Plotly.animate("attritionChart", {
+            data: [{ y: historical.attrition_counts }]
+        }, {
+            transition: { duration: 850, easing: "cubic-in-out" },
+            frame: { duration: 850, redraw: false }
+        });
+    });
+
+    Plotly.newPlot(
+        "departmentChart",
+        [{
+            type: "bar",
+            orientation: "h",
+            x: historical.department_counts.map(() => 0),
+            y: historical.departments,
+            marker: { color: chartColor },
+            hovertemplate: "%{y}: %{x} employees<extra></extra>"
+        }],
+        {
+            ...chartLayout,
+            margin: { l: 145, r: 20, t: 25, b: 45 },
+            xaxis: { ...chartLayout.xaxis, title: "Employees", rangemode: "tozero" },
+            yaxis: { ...chartLayout.yaxis, automargin: true }
+        },
+        chartConfig
+    ).then(function () {
+        return Plotly.animate("departmentChart", {
+            data: [{ x: historical.department_counts }]
+        }, {
+            transition: { duration: 900, easing: "cubic-in-out" },
+            frame: { duration: 900, redraw: false }
+        });
+    });
+
+    Plotly.newPlot(
+        "performanceChart",
+        [{
+            type: "histogram",
+            x: historical.performance_scores,
+            nbinsx: 16,
+            marker: { color: chartColor, line: { color: "#ffffff", width: 1 } },
+            opacity: 0.82,
+            hovertemplate: "Score range: %{x}<br>Employees: %{y}<extra></extra>"
+        }],
+        {
+            ...chartLayout,
+            xaxis: { ...chartLayout.xaxis, title: "Performance score" },
+            yaxis: { ...chartLayout.yaxis, title: "Number of employees" }
+        },
+        chartConfig
+    );
+
+    const salaryTraces = historical.salary_grades.map(function (grade, index) {
+        return {
+            type: "box",
+            name: grade,
+            y: historical.salary_values[index],
+            boxpoints: "outliers",
+            boxmean: true,
+            marker: { color: chartColor, size: 3 },
+            line: { color: chartColor },
+            fillcolor: "rgba(88,118,165,0.45)",
+            hovertemplate: grade + "<br>Salary: ₹%{y:,.0f}<extra></extra>"
+        };
+    });
+
+    Plotly.newPlot(
+        "salaryChart",
+        salaryTraces,
+        {
+            ...chartLayout,
+            boxmode: "group",
+            xaxis: { ...chartLayout.xaxis, title: "Employee grade" },
+            yaxis: {
+                ...chartLayout.yaxis,
+                title: "Monthly salary (INR)",
+                tickprefix: "₹",
+                separatethousands: true
+            }
+        },
+        chartConfig
+    );
+
+    const observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add("chart-visible");
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll(".chart-card").forEach(function (card) {
+        observer.observe(card);
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

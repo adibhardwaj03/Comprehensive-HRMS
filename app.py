@@ -525,13 +525,123 @@ def payroll():
 @app.route("/analytics")
 @hr_required
 def analytics():
-    department_rows = db.session.query(Employee.department, func.count(Employee.id), func.avg(Employee.monthly_salary_inr)).group_by(Employee.department).all()
-    grade_rows = db.session.query(Employee.grade, func.avg(Employee.monthly_salary_inr), func.count(Employee.id)).group_by(Employee.grade).order_by(Employee.grade).all()
-    attendance_rows = db.session.query(Attendance.status, func.count(Attendance.id)).group_by(Attendance.status).all()
-    leave_rows = db.session.query(LeaveRequest.status, func.count(LeaveRequest.id)).group_by(LeaveRequest.status).all()
-    candidate_rows = db.session.query(Candidate.status, func.count(Candidate.id)).group_by(Candidate.status).all()
-    return render_template("analytics.html", department_rows=department_rows, grade_rows=grade_rows,
-                           attendance_rows=attendance_rows, leave_rows=leave_rows, candidate_rows=candidate_rows)
+    department_rows = db.session.query(
+        Employee.department,
+        func.count(Employee.id),
+        func.avg(Employee.monthly_salary_inr)
+    ).group_by(Employee.department).all()
+
+    grade_rows = db.session.query(
+        Employee.grade,
+        func.avg(Employee.monthly_salary_inr),
+        func.count(Employee.id)
+    ).group_by(Employee.grade).order_by(Employee.grade).all()
+
+    attendance_rows = db.session.query(
+        Attendance.status,
+        func.count(Attendance.id)
+    ).group_by(Attendance.status).all()
+
+    leave_rows = db.session.query(
+        LeaveRequest.status,
+        func.count(LeaveRequest.id)
+    ).group_by(LeaveRequest.status).all()
+
+    candidate_rows = db.session.query(
+        Candidate.status,
+        func.count(Candidate.id)
+    ).group_by(Candidate.status).all()
+
+    dataset_path = os.environ.get(
+        "HRMS_DATASET_PATH",
+        "data/processed/cleaned_dataset.csv"
+    )
+
+    if not os.path.exists(dataset_path):
+        dataset_path = "HRMS_dataset_5000_records.csv"
+
+    historical = {
+        "available": False,
+        "attrition_labels": ["Stayed", "Left"],
+        "attrition_counts": [0, 0],
+        "departments": [],
+        "department_counts": [],
+        "performance_scores": [],
+        "salary_grades": [],
+        "salary_values": []
+    }
+
+    if os.path.exists(dataset_path):
+        data = pd.read_csv(dataset_path)
+
+        required_columns = {
+            "attrition",
+            "department",
+            "performance_score",
+            "grade",
+            "monthly_salary_inr"
+        }
+
+        if required_columns.issubset(data.columns):
+            data["attrition"] = pd.to_numeric(
+                data["attrition"], errors="coerce"
+            )
+            data["performance_score"] = pd.to_numeric(
+                data["performance_score"], errors="coerce"
+            )
+            data["monthly_salary_inr"] = pd.to_numeric(
+                data["monthly_salary_inr"], errors="coerce"
+            )
+
+            attrition_counts = data["attrition"].value_counts()
+
+            department_counts = (
+                data["department"]
+                .dropna()
+                .value_counts()
+                .sort_values(ascending=True)
+            )
+
+            salary_data = data.dropna(
+                subset=["grade", "monthly_salary_inr"]
+            )
+
+            historical.update({
+                "available": True,
+                "attrition_counts": [
+                    int(attrition_counts.get(0, 0)),
+                    int(attrition_counts.get(1, 0))
+                ],
+                "departments": department_counts.index.tolist(),
+                "department_counts": [
+                    int(value) for value in department_counts.values
+                ],
+                "performance_scores": (
+                    data["performance_score"]
+                    .dropna()
+                    .tolist()
+                ),
+                "salary_grades": sorted(
+                    salary_data["grade"].unique().tolist()
+                ),
+                "salary_values": [
+                    salary_data.loc[
+                        salary_data["grade"] == grade,
+                        "monthly_salary_inr"
+                    ].tolist()
+                    for grade in sorted(salary_data["grade"].unique())
+                ]
+            })
+
+    return render_template(
+        "analytics.html",
+        department_rows=department_rows,
+        grade_rows=grade_rows,
+        attendance_rows=attendance_rows,
+        leave_rows=leave_rows,
+        candidate_rows=candidate_rows,
+        historical=historical
+    )
 
 
 @app.route("/api/summary")
