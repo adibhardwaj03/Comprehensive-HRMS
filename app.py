@@ -583,6 +583,10 @@ def analytics():
     if dataset_path.exists():
         data = pd.read_csv(dataset_path)
 
+        print("DATASET PATH:", dataset_path)
+        print("DATASET ROWS:", len(data))
+        print("DATASET COLUMNS:", data.columns.tolist())
+
         required_columns = {
             "attrition",
             "department",
